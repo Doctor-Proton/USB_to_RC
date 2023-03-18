@@ -24,7 +24,7 @@ uint8_t buf_owner[BUF_COUNT] = { 0 }; // device address that owns buffer
 // MACRO CONSTANT TYPEDEF PROTYPES
 //--------------------------------------------------------------------+
 
-static void print_utf16(uint16_t *temp_buf, size_t buf_len);
+static void print_utf16(uint16_t *temp_buf, size_t buf_len, char *global_buf,int global_buf_len);
 void print_device_descriptor(tuh_xfer_t* xfer);
 void parse_config_descriptor(uint8_t dev_addr, tusb_desc_configuration_t const* desc_cfg);
 
@@ -37,6 +37,10 @@ uint32_t XID_printf_interval=0;
 
 tuh_xfer_t xid_endp_xfer={0};
 uint32_t xid_endp_interval=10;
+
+uint8_t mfg_string[128]; //this is probably not the most efficient way to do this, may need to implement a more complicated asyncronous mechanism
+uint8_t prod_string[128]; //do we want to worry about unicode?
+uint8_t serial_string[128];
 
 
 void usb_host_task(void *p)
@@ -75,8 +79,10 @@ void tuh_mount_cb (uint8_t daddr)
 void tuh_umount_cb(uint8_t daddr)
 {
   printf("Device removed, address = %d\r\n", daddr);
+  memset(&desc_device,0,sizeof(desc_device));
   XID_active=0;
   free_xid_buf(daddr);
+  signal_device_gone();
 }
 
 //--------------------------------------------------------------------+
@@ -112,21 +118,21 @@ void print_device_descriptor(tuh_xfer_t* xfer)
   printf("  iManufacturer       %u     "     , desc_device.iManufacturer);
   if (XFER_RESULT_SUCCESS == tuh_descriptor_get_manufacturer_string_sync(daddr, LANGUAGE_ID, temp_buf, sizeof(temp_buf)) )
   {
-    print_utf16(temp_buf, TU_ARRAY_SIZE(temp_buf));
+    print_utf16(temp_buf, TU_ARRAY_SIZE(temp_buf),mfg_string,sizeof(mfg_string));
   }
   printf("\r\n");
 
   printf("  iProduct            %u     "     , desc_device.iProduct);
   if (XFER_RESULT_SUCCESS == tuh_descriptor_get_product_string_sync(daddr, LANGUAGE_ID, temp_buf, sizeof(temp_buf)))
   {
-    print_utf16(temp_buf, TU_ARRAY_SIZE(temp_buf));
+    print_utf16(temp_buf, TU_ARRAY_SIZE(temp_buf),prod_string,sizeof(prod_string));
   }
   printf("\r\n");
 
   printf("  iSerialNumber       %u     "     , desc_device.iSerialNumber);
   if (XFER_RESULT_SUCCESS == tuh_descriptor_get_serial_string_sync(daddr, LANGUAGE_ID, temp_buf, sizeof(temp_buf)))
   {
-    print_utf16(temp_buf, TU_ARRAY_SIZE(temp_buf));
+    print_utf16(temp_buf, TU_ARRAY_SIZE(temp_buf),serial_string,sizeof(serial_string));
   }
   printf("\r\n");
 
@@ -137,6 +143,38 @@ void print_device_descriptor(tuh_xfer_t* xfer)
   {
     parse_config_descriptor(daddr, (tusb_desc_configuration_t*) temp_buf);
   }
+}
+
+int print_device_descriptor_ssi(char *buffer, int Len) //this should maybe be mutex, but only reads desc_device and is only for display
+{
+  int printed_len=0;
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"VID:PID %04x:%04x<br>", desc_device.idVendor, desc_device.idProduct);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"Device Descriptor:<br>");
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  bLength             %u<br>"     , desc_device.bLength);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  bDescriptorType     %u<br>"     , desc_device.bDescriptorType);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  bcdUSB              %04x<br>"   , desc_device.bcdUSB);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  bDeviceClass        %u<br>"     , desc_device.bDeviceClass);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  bDeviceSubClass     %u<br>"     , desc_device.bDeviceSubClass);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  bDeviceProtocol     %u<br>"     , desc_device.bDeviceProtocol);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  bMaxPacketSize0     %u<br>"     , desc_device.bMaxPacketSize0);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  idVendor            0x%04x<br>" , desc_device.idVendor);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  idProduct           0x%04x<br>" , desc_device.idProduct);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  bcdDevice           %04x<br>"   , desc_device.bcdDevice);
+
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  iManufacturer       %u     "     , desc_device.iManufacturer);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,mfg_string);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"<br>");
+
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  iProduct            %u     "     , desc_device.iProduct);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,prod_string);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"<br>");
+
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  iSerialNumber       %u     "     , desc_device.iSerialNumber);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,serial_string);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"<br>");
+
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  bNumConfigurations  %u<br>"     , desc_device.bNumConfigurations);
+  return printed_len;
 }
 
 //--------------------------------------------------------------------+
@@ -425,11 +463,16 @@ static int _count_utf8_bytes(const uint16_t *buf, size_t len) {
     return (int) total_bytes;
 }
 
-static void print_utf16(uint16_t *temp_buf, size_t buf_len) {
+static void print_utf16(uint16_t *temp_buf, size_t buf_len, char *global_buf,int global_buf_len) {
     size_t utf16_len = ((temp_buf[0] & 0xff) - 2) / sizeof(uint16_t);
     size_t utf8_len = (size_t) _count_utf8_bytes(temp_buf + 1, utf16_len);
     _convert_utf16le_to_utf8(temp_buf + 1, utf16_len, (uint8_t *) temp_buf, sizeof(uint16_t) * buf_len);
     ((uint8_t*) temp_buf)[utf8_len] = '\0';
 
     printf((char*)temp_buf);
+    if(global_buf!=0)
+      {
+        strncpy(global_buf,temp_buf,global_buf_len);
+      }
 }
+

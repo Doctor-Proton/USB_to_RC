@@ -45,6 +45,17 @@
   #define CFG_TUSB_RHPORT0_MODE       OPT_MODE_HOST
 #endif
 
+#if CFG_TUSB_MCU == OPT_MCU_RP2040
+// change to 1 if using pico-pio-usb as host controller for raspberry rp2040
+#define CFG_TUH_RPI_PIO_USB   0
+#define BOARD_TUH_RHPORT      CFG_TUH_RPI_PIO_USB
+#endif
+
+// RHPort number used for host can be defined by board.mk, default to port 0
+#ifndef BOARD_TUH_RHPORT
+#define BOARD_TUH_RHPORT      0
+#endif
+
 #ifndef CFG_TUSB_OS
 
 #define CFG_TUSB_OS                 OPT_OS_FREERTOS

@@ -672,8 +672,8 @@ void signal_device_gone(void)
 {
     _VID=0;
     _PID=0;
-    #warning reimplement
-    //output_clear();
+    //#warning reimplement
+    output_clear();
     if(xSemaphoreTake(vars_mutex,100)==pdTRUE)
         {
         for(int i=0;i<sizeof(axis_lookups)/sizeof(axis_lookup_t);i++)
@@ -695,4 +695,74 @@ void signal_device_gone(void)
         }
     
 
+}
+
+int read_vars_bytes(unsigned char *buf, int offset, int len)
+{
+int start=0;
+int bytes_read=0;
+if(xSemaphoreTake(vars_mutex,100)==pdTRUE)
+    {
+    struct expr_var *varp=vars.head;
+    if(varp==NULL)
+        {
+        xSemaphoreGive(vars_mutex);
+        return 0; 
+        }
+    int bytes_so_far=0;
+    int current_size=sizeof(struct expr_var)+strlen(varp->name)+1;
+    while(varp!=NULL && (bytes_so_far+current_size)<=offset)
+        {
+        bytes_so_far+=current_size;
+        varp=varp->next;
+        current_size=sizeof(struct expr_var)+strlen(varp->name)+1;
+        }
+    if(varp==NULL)
+        {
+        xSemaphoreGive(vars_mutex);
+        return 0; 
+        }
+    int skip_bytes=current_size-(bytes_so_far+current_size-offset); //how many bytes "in" to the struct to we start copying at
+    unsigned char *cp = (unsigned char*)varp;
+    cp+=skip_bytes;
+    memcpy(buf,(void*)cp,bytes_so_far+current_size-offset);
+    bytes_read+=bytes_so_far+current_size-offset;
+    varp=varp->next;
+    while(bytes_read<len && varp!=NULL)
+    {
+        current_size=sizeof(struct expr_var)+strlen(varp->name)+1;
+        if(current_size<=(len-bytes_read))
+            {
+            memcpy(&buf[bytes_read],varp,current_size);
+            bytes_read+=current_size;
+            }
+            else
+            {
+            memcpy(&buf[bytes_read],varp,(len-bytes_read));
+            bytes_read+=(len-bytes_read);
+            }
+        varp=varp->next;
+    }
+    
+    xSemaphoreGive(vars_mutex);
+    return bytes_read;
+    } 
+return -1;
+}
+
+int get_vars_size(void)
+{
+int size=0;
+if(xSemaphoreTake(vars_mutex,100)==pdTRUE)
+    {
+    struct expr_var *varp=vars.head;
+    while(varp!=NULL)
+        {
+            size+=sizeof(struct expr_var)+strlen(varp->name)+1;
+            varp=varp->next;
+        }
+    xSemaphoreGive(vars_mutex); 
+    return size;
+    }
+return -1;
 }

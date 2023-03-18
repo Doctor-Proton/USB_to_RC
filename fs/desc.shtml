@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+    <head> <title>Pico W SSI-PAGE</title> </head>
+    <body>
+    <h1>Pico W</h1>
+    <h3>USB descriptor</h3>
+        <p><!--#desc--></p>
+	<br>
+	<br>
+    <a href="/index.html">Back</a>
+    </body>
+</html>

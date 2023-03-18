@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "bsp/board.h"
 #include "usb_control_decode.h"
@@ -33,6 +34,7 @@
 #include "task.h"
 #include "output.h"
 #include "usb_task.h"
+#include "wifi.h"
 
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
@@ -56,17 +58,28 @@ StackType_t xUSBTaskStack[ USB_TASK_STACKSIZE ];
 StaticTask_t xOutputTaskBuffer;
 StackType_t xOutputTaskStack[ OUTPUT_TASK_STACKSIZE ];
 
-/*------------- MAIN -------------*/
+#define WIFI_TASK_STACKSIZE 512
+StaticTask_t xWifiTaskBuffer;
+StackType_t xWifiTaskStack[ WIFI_TASK_STACKSIZE ];
+
+/*------------- MAIN --5-----------*/
 int main(void)
 {
   board_init(); 
   stdio_init_all();
 
+
   printf("TinyUSB Host CDC MSC HID Example\r\n");
   
   xTaskCreateStatic(led_blinking_task, "LED_Task", LED_TASK_STACKSIZE, NULL, 1, xLEDTaskStack,&xLEDTaskBuffer);
-  xTaskCreateStatic(usb_host_task, "USB_Task", USB_TASK_STACKSIZE, NULL, 255, xUSBTaskStack,&xUSBTaskBuffer);
+  xTaskHandle USBTaskHandle=xTaskCreateStatic(usb_host_task, "USB_Task", USB_TASK_STACKSIZE, NULL, 255, xUSBTaskStack,&xUSBTaskBuffer);
   xTaskCreateStatic(output_task, "output_Task", OUTPUT_TASK_STACKSIZE, NULL, 250, xOutputTaskStack,&xOutputTaskBuffer);
+  xTaskHandle WifiTaskHandle=xTaskCreateStatic(wifi_task, "wifi_Task", WIFI_TASK_STACKSIZE, NULL, 250, xWifiTaskStack,&xWifiTaskBuffer);
+  UBaseType_t uxCoreAffinityMask;
+  uxCoreAffinityMask = (( 1 << 1 ));
+  vTaskCoreAffinitySet(WifiTaskHandle,uxCoreAffinityMask);
+  uxCoreAffinityMask = (( 1 << 0 ));
+  vTaskCoreAffinitySet(USBTaskHandle,uxCoreAffinityMask);
   vTaskStartScheduler();
 
   //tusb_init();
@@ -95,10 +108,14 @@ void led_blinking_task(void *p)
   // Blink every interval ms
   //if ( board_millis() - start_ms < interval_ms) return; // not enough time
   //start_ms += interval_ms;
+  const int LED_PIN=25;
+  gpio_init(LED_PIN);
+  gpio_set_dir(LED_PIN, GPIO_OUT);
 while (1)
   {
-  board_led_write(led_state);
-  led_state = 1 - led_state; // toggle
+  gpio_put(LED_PIN, 0);
+  vTaskDelay(100);
+  gpio_put(LED_PIN, 1);
   vTaskDelay(100);
   }
 }

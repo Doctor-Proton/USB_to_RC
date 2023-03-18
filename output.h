@@ -7,6 +7,8 @@ void new_descriptor_set_event(void);
 int print_var_line(char output[],int maxlen, int startindex, int varcount);
 void signal_new_device(unsigned short VID, unsigned short PID);
 void signal_device_gone(void);
+int get_vars_size(void);
+int read_vars_bytes(unsigned char *buf, int offset, int len);
 
 #define TIMING_DEBUG_GPIO 47
 #define TIMING_DEBUG_GPIO_2 48
