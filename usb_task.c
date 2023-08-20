@@ -68,7 +68,7 @@ void usb_host_task(void *p)
 // Invoked when device is mounted (configured)
 void tuh_mount_cb (uint8_t daddr)
 {
-  printf("Device attached, address = %d\r\n", daddr);
+//printf("Device attached, address = %d\r\n", daddr);
 
   // Get Device Descriptor
   // TODO: invoking control transfer now has issue with mounting hub with multiple devices attached, fix later
@@ -78,7 +78,7 @@ void tuh_mount_cb (uint8_t daddr)
 /// Invoked when device is unmounted (bus reset/unplugged)
 void tuh_umount_cb(uint8_t daddr)
 {
-  printf("Device removed, address = %d\r\n", daddr);
+  //printf("Device removed, address = %d\r\n", daddr);
   memset(&desc_device,0,sizeof(desc_device));
   XID_active=0;
   free_xid_buf(daddr);
@@ -175,6 +175,57 @@ int print_device_descriptor_ssi(char *buffer, int Len) //this should maybe be mu
 
   printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  bNumConfigurations  %u<br>"     , desc_device.bNumConfigurations);
   return printed_len;
+}
+
+int print_device_descriptor_vt100() //this should maybe be mutex, but only reads desc_device and is only for display
+{
+  printf("VID:PID %04x:%04x\n", desc_device.idVendor, desc_device.idProduct);
+  printf("Device Descriptor:\n");
+  printf("  bLength             %u\n"     , desc_device.bLength);
+  printf("  bDescriptorType     %u\n"     , desc_device.bDescriptorType);
+  printf("  bcdUSB              %04x\n"   , desc_device.bcdUSB);
+  printf("  bDeviceClass        %u\n"     , desc_device.bDeviceClass);
+  printf("  bDeviceSubClass     %u\n"     , desc_device.bDeviceSubClass);
+  printf("  bDeviceProtocol     %u\n"     , desc_device.bDeviceProtocol);
+  printf("  bMaxPacketSize0     %u\n"     , desc_device.bMaxPacketSize0);
+  printf("  idVendor            0x%04x\n" , desc_device.idVendor);
+  printf("  idProduct           0x%04x\n" , desc_device.idProduct);
+  printf("  bcdDevice           %04x\n"   , desc_device.bcdDevice);
+
+  printf("  iManufacturer       %u     "     , desc_device.iManufacturer);
+  printf(mfg_string);
+  printf("\n");
+
+  printf("  iProduct            %u     "     , desc_device.iProduct);
+  printf(prod_string);
+  printf("\n");
+
+  printf("  iSerialNumber       %u     "     , desc_device.iSerialNumber);
+  printf(serial_string);
+  printf("\n");
+
+  printf("  bNumConfigurations  %u\n"     , desc_device.bNumConfigurations);
+}
+
+void copy_device_descriptor(tusb_desc_device_t *desc)
+{
+  *desc=desc_device;
+}
+
+void get_product_string(char *buffer, int len)
+{
+  strncpy(buffer,prod_string,len);
+}
+
+void get_manufacturer_string(char *buffer, int len)
+{
+  strncpy(buffer,mfg_string,len);
+}
+
+void get_vid_pid(uint16_t *vid, uint16_t *pid)
+{
+  *pid=desc_device.idProduct;
+  *vid=desc_device.idVendor;
 }
 
 //--------------------------------------------------------------------+
@@ -355,13 +406,13 @@ void xid_report_received(tuh_xfer_t* xfer)
 
   if (xfer->result == XFER_RESULT_SUCCESS)
   {
-    printf("[dev %u: ep %02x] XID Report:", xfer->daddr, xfer->ep_addr);
+    /*("[dev %u: ep %02x] XID Report:", xfer->daddr, xfer->ep_addr);
     for(uint32_t i=0; i<xfer->actual_len; i++)
     {
       if (i%16 == 0) printf("\r\n  ");
       printf("%02X ", buf[i]);
     }
-    printf("\r\n");
+    printf("\r\n");*/
   }
   free_xid_buf(buf);
   load_XID_report();
@@ -379,13 +430,13 @@ void xid_endp_callback(tuh_xfer_t* xfer)
   if (xfer->result == XFER_RESULT_SUCCESS && (xTaskGetTickCount()-XID_printf_interval)>500)
   {
     XID_printf_interval=xTaskGetTickCount();
-    printf("[dev %u: ep %02x] XID Report:", xfer->daddr, xfer->ep_addr);
+    /*printf("[dev %u: ep %02x] XID Report:", xfer->daddr, xfer->ep_addr);
     for(uint32_t i=0; i<xfer->actual_len; i++)
     {
       if (i%16 == 0) printf("\r\n  ");
       printf("%02X ", buf[i]);
     }
-    printf("\r\n");
+    printf("\r\n");*/
   }
 
   xid_endp_xfer.buffer = buf;

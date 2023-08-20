@@ -54,11 +54,11 @@ execute_process(COMMAND
 file(RENAME fsdata.c my_fsdata.c)
 
 # Add any PICO_CONFIG entries specified in the Advanced settings
-add_compile_definitions(PICO_DEFAULT_UART_BAUD_RATE=460800)
+add_compile_definitions(PICO_DEFAULT_UART_BAUD_RATE=921600)
 
 add_executable(USBHost main.c hid_app.c usb_control_decode.c HIDParser/HIDParser.c 
     output.c usb_task.c sdcard.c hw_config.c ppm.c uart.c dhcpserver/dhcpserver.c wifi.c
-    cgi.cpp ssi.cpp)
+    cgi.cpp ssi.cpp VT100.c)
 
 pico_set_program_name(USBHost "USBHost")
 pico_set_program_version(USBHost "0.1")

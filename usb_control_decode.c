@@ -11,7 +11,7 @@
 static bool HIDReportReady=false;
 HID_ReportInfo_t HIDReport;
 uint32_t last_display_time=0;
-bool do_decode_print=true;
+bool do_decode_print=false;
 
 SemaphoreHandle_t HID_report_mutex = NULL;
 StaticSemaphore_t HID_report_mutex_buffer;

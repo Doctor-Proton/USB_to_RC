@@ -1,0 +1,8 @@
+#define FULL_DRAW_TIME 5000
+#define VAR_COLUMN_WIDTH 20
+#define VAR_COLUMN_COUNT 8
+#define CHANGE_BUFFER_LPF 0.8
+#define CHANGE_THRESHOLD 0.01
+#define VAR_PRINT_ROW_OFFSET 5
+
+void VT100_task(void *arg);

@@ -23,11 +23,12 @@
 
 #define DEFAULT_CONFIG_FILE "/config/default.cfg"
 #define LOOKUP_CONFIG_FILE "/config/lookup.cfg"
+char active_mixer_filename[64]={0};
 
 EventGroupHandle_t output_ready_event_handle;
 StaticEventGroup_t output_ready_group;
 
-static bool do_print=true;
+static bool do_print=false;
 
 #define OUTPUT_READY_BIT (1<<0)
 #define DESCRIPTOR_READY_BIT (1<<1)
@@ -205,8 +206,7 @@ void output_task(void *arg)
     uint32_t print_timer=0;
 
     vTaskDelay(500);
-    //#warning reimplement
-    sd_card_init();
+
 
 /*    for(int i=0;i<MAX_INPUT_CHANNELS;i++)
     {
@@ -223,15 +223,7 @@ void output_task(void *arg)
             {
             HID_report_p=(HID_ReportInfo_t *)get_HID_report_pointer();
             if(HID_report_p!=0)
-                { 
-                for(int i=0;i<MAX_INPUT_CHANNELS;i++)
-                    {
-                        char input_name[10];
-                        int len=snprintf(input_name,sizeof(input_name),"in_%02d",i);
-                        expr_var(&vars,input_name,len);
-                        struct expr_var *again = expr_var(&vars, input_name, len);
-                        again->value=0.0f;
-                    }
+                {
                 for(int i=0;i<MAX_OUTPUT_CHANNELS;i++)
                     {
                         char output_name[8];
@@ -240,6 +232,15 @@ void output_task(void *arg)
                         struct expr_var *again = expr_var(&vars, output_name, len);
                         again->value=0.0f;
                     }
+                for(int i=0;i<MAX_INPUT_CHANNELS;i++)
+                    {
+                        char input_name[10];
+                        int len=snprintf(input_name,sizeof(input_name),"in_%02d",i);
+                        expr_var(&vars,input_name,len);
+                        struct expr_var *again = expr_var(&vars, input_name, len);
+                        again->value=0.0f;
+                    }
+
                 
                     int button_index=0;
                     for(int i=0;i<HID_report_p->TotalReportItems;i++)
@@ -299,6 +300,12 @@ void output_task(void *arg)
             }
         if((events&OUTPUT_READY_BIT)==OUTPUT_READY_BIT && xSemaphoreTake(vars_mutex,2)==pdTRUE)  //wait for output event to be set
         {
+            struct expr_var *varp=vars.head;
+            if(varp==NULL)
+            {
+               xSemaphoreGive(vars_mutex);
+               continue; 
+            } 
             HID_report_p=(HID_ReportInfo_t *)get_HID_report_pointer();
             int input_count=0;
             if(HID_report_p!=0)
@@ -421,20 +428,19 @@ void output_task(void *arg)
         if((xTaskGetTickCount()-print_timer)>500 && do_print==true)
             {
             print_timer=xTaskGetTickCount();
-            printf("[OUTPUT] input values:\r\n");
+            printf("\033[0;0f\033[J[OUTPUT] input values:\r\n");
             for(int i=0;i<input_count;i++)
                 {
                 printf("%1.2f\t",input_values[i]);
                 }
-            printf("\n");
-            printf("[OUTPUT] output values:\r\n");
+            printf("\n\033[40m\033[37m");
+            printf("\033[8;0f[OUTPUT] output values:\r\n");
             for(int i=0;i<MAX_OUTPUT_CHANNELS;i++)
                 {
                 printf("%d\t",Channels[i]);
                 }
             printf("\n");
             }
-        //#warning reimplement
         assign_output_channels(Channels);
         }
         /*if((events&DEVICE_AVAILABLE_BIT)==DEVICE_AVAILABLE_BIT && xSemaphoreTake(vars_mutex,200)==pdTRUE)
@@ -442,7 +448,6 @@ void output_task(void *arg)
             init_output_mixer();
             xSemaphoreGive(vars_mutex);
         }*/
-    //#warning reimplement
     output_tick();
     }
     
@@ -576,6 +581,7 @@ void get_config_line(char *line, ssize_t max_len,FF_FILE *f)
 int load_output_mixer(char filename[])
 {
 printf("[MIX] Attempting to load %s\r\n",filename);
+memset(active_mixer_filename,0,sizeof(active_mixer_filename));
 char filepath[64];
 strncpy(filepath,MOUNT_POINT,sizeof(filepath));
 strncat(filepath,filename,sizeof(filepath)-1);
@@ -585,6 +591,7 @@ if(f==NULL)
         printf("[MIX] failed to load mixer\r\n");
         return 0;
     }
+strncpy(active_mixer_filename,filename,sizeof(active_mixer_filename));
 char line[128];
 unsigned char expr_index=0;
 do
@@ -614,6 +621,9 @@ void init_output_mixer(void)
 char config_file[32]=DEFAULT_CONFIG_FILE;
 char line[64]={0};
 char filepath[64];
+
+sd_card_init();
+
 printf("[MIX] Attempting to load mixers\r\n");
 strncpy(filepath,MOUNT_POINT,sizeof(filepath));
 strncat(filepath,LOOKUP_CONFIG_FILE,sizeof(filepath)-1);
@@ -647,6 +657,8 @@ while(line[0]!=0)
         strncpy(filepath,MOUNT_POINT,sizeof(filepath));
         strncat(filepath,config_file,sizeof(filepath)-1);
         int exists=ff_stat(filepath,&file_stats);
+        if(exists==-1)
+            printf("[MIX] failed to stat file %s reason %d",filepath,stdioGET_ERRNO());
         if(exists==0 && load_output_mixer(config_file)==1)
             {
             ff_fclose(f);
@@ -656,8 +668,22 @@ while(line[0]!=0)
     }
 printf("[MIX] done\r\n");
 ff_fclose(f);
+sd_unmount();
 }
 //#endif
+
+void reload_mixers(void)
+{
+uint16_t vid,pid;
+vid=_VID;
+pid=_PID;
+if(usb_connected())
+    {
+    signal_device_gone();
+    signal_new_device(vid,pid);
+    }
+
+}
 
 void signal_new_device(unsigned short VID, unsigned short PID)
 {
@@ -765,4 +791,60 @@ if(xSemaphoreTake(vars_mutex,100)==pdTRUE)
     return size;
     }
 return -1;
+}
+
+int usb_connected(void)
+{
+    return _VID!=0 && _PID !=0;
+}
+
+int get_vars_count(void)
+{
+int count=0;
+if(xSemaphoreTake(vars_mutex,100)==pdTRUE)
+    {
+    struct expr_var *varp=vars.head;
+    while(varp!=NULL)
+    {
+        count+=1;
+        varp=varp->next;
+    } 
+    xSemaphoreGive(vars_mutex); 
+    }
+    else
+    {
+        return -1;
+    } 
+return count;
+}
+
+void get_var(char *buffer, int len, float *value,int var_index)
+{
+int count=0;
+buffer[0]=0;
+if(xSemaphoreTake(vars_mutex,100)==pdTRUE)
+    {
+    struct expr_var *varp=vars.head;
+    while(varp!=NULL && count<var_index)
+    {
+        count+=1;
+        varp=varp->next;
+    }
+    if(varp!=NULL)
+        {
+        strncpy(buffer,varp->name,len);
+        *value=varp->value;
+
+        }
+    xSemaphoreGive(vars_mutex); 
+    }
+    else
+    {
+        return;
+    }   
+}
+
+char *get_mixer_filename(void)
+{
+    return active_mixer_filename;
 }

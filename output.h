@@ -9,6 +9,11 @@ void signal_new_device(unsigned short VID, unsigned short PID);
 void signal_device_gone(void);
 int get_vars_size(void);
 int read_vars_bytes(unsigned char *buf, int offset, int len);
+int usb_connected(void);
+int get_vars_count(void);
+void get_var(char *buffer, int len, float *value,int var_index);
+char *get_mixer_filename(void);
+void reload_mixers(void);
 
 #define TIMING_DEBUG_GPIO 47
 #define TIMING_DEBUG_GPIO_2 48

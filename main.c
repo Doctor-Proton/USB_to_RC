@@ -34,7 +34,10 @@
 #include "task.h"
 #include "output.h"
 #include "usb_task.h"
+#ifdef WIFI_UI
 #include "wifi.h"
+#endif
+#include "VT100.h"
 
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
@@ -58,9 +61,15 @@ StackType_t xUSBTaskStack[ USB_TASK_STACKSIZE ];
 StaticTask_t xOutputTaskBuffer;
 StackType_t xOutputTaskStack[ OUTPUT_TASK_STACKSIZE ];
 
+#ifdef WIFI_UI
 #define WIFI_TASK_STACKSIZE 512
 StaticTask_t xWifiTaskBuffer;
 StackType_t xWifiTaskStack[ WIFI_TASK_STACKSIZE ];
+#endif
+
+#define VT100_TASK_STACKSIZE 512
+StaticTask_t xVT100TaskBuffer;
+StackType_t xVT100TaskStack[ VT100_TASK_STACKSIZE ];
 
 /*------------- MAIN --5-----------*/
 int main(void)
@@ -74,10 +83,14 @@ int main(void)
   xTaskCreateStatic(led_blinking_task, "LED_Task", LED_TASK_STACKSIZE, NULL, 1, xLEDTaskStack,&xLEDTaskBuffer);
   xTaskHandle USBTaskHandle=xTaskCreateStatic(usb_host_task, "USB_Task", USB_TASK_STACKSIZE, NULL, 255, xUSBTaskStack,&xUSBTaskBuffer);
   xTaskCreateStatic(output_task, "output_Task", OUTPUT_TASK_STACKSIZE, NULL, 250, xOutputTaskStack,&xOutputTaskBuffer);
-  xTaskHandle WifiTaskHandle=xTaskCreateStatic(wifi_task, "wifi_Task", WIFI_TASK_STACKSIZE, NULL, 250, xWifiTaskStack,&xWifiTaskBuffer);
+  xTaskCreateStatic(VT100_task,"VT100_Task",VT100_TASK_STACKSIZE,NULL,240,xVT100TaskStack,&xVT100TaskBuffer);
   UBaseType_t uxCoreAffinityMask;
+#ifdef WIFI_UI
+  xTaskHandle WifiTaskHandle=xTaskCreateStatic(wifi_task, "wifi_Task", WIFI_TASK_STACKSIZE, NULL, 250, xWifiTaskStack,&xWifiTaskBuffer);
   uxCoreAffinityMask = (( 1 << 1 ));
   vTaskCoreAffinitySet(WifiTaskHandle,uxCoreAffinityMask);
+#endif
+
   uxCoreAffinityMask = (( 1 << 0 ));
   vTaskCoreAffinitySet(USBTaskHandle,uxCoreAffinityMask);
   vTaskStartScheduler();
