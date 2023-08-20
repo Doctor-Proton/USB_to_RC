@@ -202,6 +202,7 @@ void print_menu(bool full_draw)
 
 void VT100_task(void *arg)
 {
+vTaskDelay(5000);
 for(;;)
 {
 
