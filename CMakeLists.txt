@@ -34,7 +34,7 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 
 add_subdirectory(../FreeRTOS+FAT+CLI build)
-add_subdirectory(Pico-PIO-USB)
+add_subdirectory(./Pico-PIO-USB)
 
 
 set(MAKE_FS_DATA_SCRIPT ${CMAKE_CURRENT_LIST_DIR}/external/makefsdata)

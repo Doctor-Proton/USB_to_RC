@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "hardware/uart.h"
+#include "hardware/gpio.h"
 #include "bsp/board.h"
 #include "tusb.h"
 #include "usb_control_decode.h"
@@ -9,6 +10,7 @@
 #include "task.h"
 #include "output.h"
 #include "usb_task.h"
+#include "io.h"
 
 // English
 #define LANGUAGE_ID 0x0409
@@ -45,11 +47,21 @@ uint8_t serial_string[128];
 
 void usb_host_task(void *p)
 {
+  gpio_init(USB_POWER_PIN);
+  gpio_set_dir(USB_POWER_PIN, GPIO_OUT);
+  gpio_put(USB_POWER_PIN, 0);
   tusb_init();
   init_usb_control_decode();
   uint32_t last_endp_time=0;
+  uint32_t start_time=xTaskGetTickCount();
+  uint8_t USB_power=0;
   while (1)
   {
+    if((xTaskGetTickCount()-start_time)>1000 && USB_power==0)
+      {
+      USB_power=1;
+      gpio_put(USB_POWER_PIN, 1);
+      }
     tuh_task();
     #if CFG_TUH_HID
     hid_app_task();
