@@ -10,11 +10,13 @@
 #include "hardware/dma.h"
 #include "hardware/irq.h"
 #include "uart.h"
+#include "parameters.h"
+#include "io.h"
 
 
 //#define SBUS_OUT 
 
-#define PPM_OUTPUT_PIN 15
+
 
 #define PPM_BASE_TIME 280
 
@@ -153,14 +155,14 @@ if((xTaskGetTickCount()-LastOutputTime)>OUTPUT_PERIOD && xSemaphoreTake(ppm_outp
         SendSbus(output_channels,MAX_OUTPUT_CHANNELS);
     xSemaphoreGive(ppm_output_mutex);
     }
-if((xTaskGetTickCount()-HeartbeatTick)>HEARTBEAT_INTERVAL)
+if((xTaskGetTickCount()-HeartbeatTick)>(uint32_t)get_param("MAVLINK_HEARTBEAT_INTERVAL") && (uint32_t)get_param("MAVLINK_HEARTBEAT_INTERVAL")!=0)
     {
     HeartbeatTick=xTaskGetTickCount();
     mavlink_message_t Heartbeat;
     mavlink_msg_heartbeat_pack_chan(MAV_SYS_ID,MAV_COMP_ID,0,&Heartbeat,MAV_TYPE_GENERIC,MAV_AUTOPILOT_INVALID,0,0,0);
     output_send_mavlink(&Heartbeat);
     }
-if((xTaskGetTickCount()-RCOverrideTick)>RC_CHANNELS_OVERRIDE_INTERVAL && OutputType!=MODE_NO_OUTPUT)
+if((xTaskGetTickCount()-RCOverrideTick)>(uint32_t)get_param("MAVLINK_RC_OVERRIDE_INTERVAL") && OutputType!=MODE_NO_OUTPUT)
     {
     RCOverrideTick=xTaskGetTickCount();
     mavlink_message_t Override;

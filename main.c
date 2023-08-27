@@ -53,7 +53,7 @@ void usb_host_task(void *p);
 StaticTask_t xLEDTaskBuffer;
 StackType_t xLEDTaskStack[ LED_TASK_STACKSIZE ];
 
-#define USB_TASK_STACKSIZE 512
+#define USB_TASK_STACKSIZE 1024
 StaticTask_t xUSBTaskBuffer;
 StackType_t xUSBTaskStack[ USB_TASK_STACKSIZE ];
 
@@ -67,7 +67,7 @@ StaticTask_t xWifiTaskBuffer;
 StackType_t xWifiTaskStack[ WIFI_TASK_STACKSIZE ];
 #endif
 
-#define VT100_TASK_STACKSIZE 512
+#define VT100_TASK_STACKSIZE 1024
 StaticTask_t xVT100TaskBuffer;
 StackType_t xVT100TaskStack[ VT100_TASK_STACKSIZE ];
 
@@ -91,7 +91,7 @@ int main(void)
   vTaskCoreAffinitySet(WifiTaskHandle,uxCoreAffinityMask);
 #endif
 
-  uxCoreAffinityMask = (( 1 << 0 ));
+  uxCoreAffinityMask = (( 1 << 1 ));
   vTaskCoreAffinitySet(USBTaskHandle,uxCoreAffinityMask);
   vTaskStartScheduler();
 

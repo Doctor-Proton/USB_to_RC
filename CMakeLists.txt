@@ -58,7 +58,7 @@ add_compile_definitions(PICO_DEFAULT_UART_BAUD_RATE=921600)
 
 add_executable(USBHost main.c hid_app.c usb_control_decode.c HIDParser/HIDParser.c 
     output.c usb_task.c sdcard.c hw_config.c ppm.c uart.c dhcpserver/dhcpserver.c wifi.c
-    cgi.cpp ssi.cpp VT100.c)
+    cgi.cpp ssi.cpp VT100.c parameters.c)
 
 pico_set_program_name(USBHost "USBHost")
 pico_set_program_version(USBHost "0.1")

@@ -17,6 +17,7 @@
 //
 #include "hw_config.h"
 #include "ppm.h"
+#include "parameters.h"
 
 
 #define OUTPUT_TAG "out"
@@ -93,9 +94,6 @@ struct expr *expressions[MAX_EXPRESSION_COUNT]={0};
 
 unsigned short _VID=0,_PID=0;
 
-uint16_t min_us=LOWER_US;   //-100%
-uint16_t max_us=UPPER_US;   //100%
-
 static float scale_us(struct expr_func *f, vec_expr_t *args, void *c) {
   float input = expr_eval(&vec_nth(args, 0));
   float min = expr_eval(&vec_nth(args, 1));
@@ -105,6 +103,8 @@ static float scale_us(struct expr_func *f, vec_expr_t *args, void *c) {
 }
 
 static float scale_percent(struct expr_func *f, vec_expr_t *args, void *c) {
+uint16_t min_us=LOWER_US;   //-100%
+uint16_t max_us=UPPER_US;   //100%
     float input = (expr_eval(&vec_nth(args, 0))-0.5f)/0.5f;
     float min = expr_eval(&vec_nth(args, 1))/100;
     float max = expr_eval(&vec_nth(args, 2))/100;
@@ -140,6 +140,8 @@ static float sticky_buttons_us(struct expr_func *f, vec_expr_t *args, void *c)
 
 static float sticky_buttons_percent(struct expr_func *f, vec_expr_t *args, void *c)
 {
+uint16_t min_us=LOWER_US;   //-100%
+uint16_t max_us=UPPER_US;   //100%
     if(args->len<2)
         return 0;
     float old_value=expr_eval(&vec_nth(args, 0));
@@ -571,12 +573,19 @@ void get_config_line(char *line, ssize_t max_len,FF_FILE *f)
                 {
                 return;
                 }
-            if(ff_fread(&fchar,1,1,f)!=1)  //failed to read
-                return;
+            do
+            {
+
+                if(ff_fread(&fchar,1,1,f)!=1)
+                    return;
+            } while (!isprint(fchar) && fchar!=0x0A && fchar!=0x0d);
+
         } while (fchar!=0x0A && fchar!=0x0d);
-    } while(is_comment==true);
+    } while(strlen(line)==0);
     
 }
+
+int converted;
 
 int load_output_mixer(char filename[])
 {
@@ -596,8 +605,20 @@ char line[128];
 unsigned char expr_index=0;
 do
 {
+memset(line,0,sizeof(line));
 get_config_line(line,sizeof(line),f);
 printf("[MIX] Attempting to parse expression %s\r\n",line);
+char name[32];
+float value;
+if(sscanf(line,"%31s %g",name,&value)==2)
+    {
+    if(set_param(name,value)==1)    //we loaded this expression as a parameter
+        {
+        printf("[MIX] Loaded parameter %s=%G\r\n",name,value); 
+        continue;
+        }
+    }
+
 struct expr *e=expr_create(line,strlen(line),&vars,user_funcs);
 if(e!=NULL)
     {
@@ -607,7 +628,7 @@ if(e!=NULL)
     }
     else
     {
-    printf("[MIX] Parse failed");
+    printf("[MIX] Parse failed\r\n");
     }
 } while (line[0]!=0 && expr_index<MAX_EXPRESSION_COUNT);
 ff_fclose(f);

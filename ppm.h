@@ -16,9 +16,6 @@ void output_clear(void);
 void output_init(void);
 
 
-#define UART_TX_GPIO 8
-#define UART_RX_GPIO 9
-
 #define HEARTBEAT_INTERVAL 1000
 
 //stuff below needs to be configurable
@@ -34,8 +31,8 @@ void output_init(void);
 
 #define MAX_OUTPUT_CHANNELS 16
 
-#define UPPER_US 2000
-#define LOWER_US 1000
+//#define UPPER_US 2000
+//#define LOWER_US 1000
 
 #define UPPER_LSB 1792
 #define LOWER_LSB 192

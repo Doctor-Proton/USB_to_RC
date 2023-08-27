@@ -11,6 +11,7 @@
 
 #include "output.h"
 #include "usb_task.h"
+#include "io.h"
 
 uint32_t full_redraw_timer=0;
 float change_buffer[128]={0};
@@ -105,7 +106,12 @@ void print_normal(void)
         float value;
         char buffer[11];
         get_var(buffer,sizeof(buffer),&value,i);
-        change_buffer[i]=change_buffer[i]*CHANGE_BUFFER_LPF + (1-CHANGE_BUFFER_LPF)*(value-last_value[i]);
+        float delta=value-last_value[i];
+        if(value!=0)
+            delta/=value;
+            else
+            delta=0;
+        change_buffer[i]=change_buffer[i]*CHANGE_BUFFER_LPF + (1-CHANGE_BUFFER_LPF)*(delta);
 
         default_background();
         char printf_modifier[]="%+1.2f";
@@ -203,6 +209,8 @@ void print_menu(bool full_draw)
 void VT100_task(void *arg)
 {
 vTaskDelay(5000);
+gpio_init(TEST_GPIO);
+gpio_set_dir(TEST_GPIO,true);
 for(;;)
 {
 
@@ -212,7 +220,9 @@ for(;;)
             if(last_menu_state!=menu_state)
                 full_redraw_timer=0;
             last_menu_state=menu_state;
+            gpio_put(TEST_GPIO,true);
             print_normal();
+            gpio_put(TEST_GPIO,false);
             break;
         case MENU_MAIN:
             if(last_menu_state!=menu_state)
