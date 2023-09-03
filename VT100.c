@@ -22,7 +22,7 @@ bool return_on_any_key=false;
 enum {
     MENU_NORMAL,
     MENU_MAIN,
-    MENU_DESCRIPTOR,
+    //MENU_DESCRIPTOR,
 } menu_state=MENU_NORMAL, last_menu_state=MENU_NORMAL;
 
 void red_text(void)
@@ -206,8 +206,11 @@ void print_menu(bool full_draw)
         }   
 }
 
+char test_string[]="qwertyuiop[]asdfghjkl;'zxcvbnm,.qwertyuiop[]asdfghjkl;'zxcvbnm,.qwertyuiop[]asdfghjkl;'zxcvbnm,.a\r\n";
+
 void VT100_task(void *arg)
 {
+(void)arg;
 vTaskDelay(5000);
 gpio_init(TEST_GPIO);
 gpio_set_dir(TEST_GPIO,true);

@@ -44,7 +44,7 @@
 //--------------------------------------------------------------------+
 
 extern void cdc_task(void);
-extern void hid_app_task(void);
+
 
 void led_blinking_task(void *p);
 void usb_host_task(void *p);
@@ -80,16 +80,22 @@ int main(void)
 
   printf("TinyUSB Host CDC MSC HID Example\r\n");
   
-  xTaskCreateStatic(led_blinking_task, "LED_Task", LED_TASK_STACKSIZE, NULL, 1, xLEDTaskStack,&xLEDTaskBuffer);
+  xTaskHandle LEDTaskHandle=xTaskCreateStatic(led_blinking_task, "LED_Task", LED_TASK_STACKSIZE, NULL, 1, xLEDTaskStack,&xLEDTaskBuffer);
   xTaskHandle USBTaskHandle=xTaskCreateStatic(usb_host_task, "USB_Task", USB_TASK_STACKSIZE, NULL, 255, xUSBTaskStack,&xUSBTaskBuffer);
-  xTaskCreateStatic(output_task, "output_Task", OUTPUT_TASK_STACKSIZE, NULL, 250, xOutputTaskStack,&xOutputTaskBuffer);
-  xTaskCreateStatic(VT100_task,"VT100_Task",VT100_TASK_STACKSIZE,NULL,240,xVT100TaskStack,&xVT100TaskBuffer);
+  xTaskHandle OutputTaskHandle=xTaskCreateStatic(output_task, "output_Task", OUTPUT_TASK_STACKSIZE, NULL, 250, xOutputTaskStack,&xOutputTaskBuffer);
+  xTaskHandle VT100TaskHandle=xTaskCreateStatic(VT100_task,"VT100_Task",VT100_TASK_STACKSIZE,NULL,240,xVT100TaskStack,&xVT100TaskBuffer);
   UBaseType_t uxCoreAffinityMask;
 #ifdef WIFI_UI
   xTaskHandle WifiTaskHandle=xTaskCreateStatic(wifi_task, "wifi_Task", WIFI_TASK_STACKSIZE, NULL, 250, xWifiTaskStack,&xWifiTaskBuffer);
   uxCoreAffinityMask = (( 1 << 1 ));
   vTaskCoreAffinitySet(WifiTaskHandle,uxCoreAffinityMask);
 #endif
+
+  uxCoreAffinityMask=(1<<0);
+  vTaskCoreAffinitySet(LEDTaskHandle,uxCoreAffinityMask);
+  vTaskCoreAffinitySet(OutputTaskHandle,uxCoreAffinityMask);
+  vTaskCoreAffinitySet(VT100TaskHandle,uxCoreAffinityMask);
+
 
   uxCoreAffinityMask = (( 1 << 1 ));
   vTaskCoreAffinitySet(USBTaskHandle,uxCoreAffinityMask);
@@ -113,11 +119,6 @@ int main(void)
 //--------------------------------------------------------------------+
 void led_blinking_task(void *p)
 {
-  const uint32_t interval_ms = 1000;
-  static uint32_t start_ms = 0;
-
-  static bool led_state = false;
-
   // Blink every interval ms
   //if ( board_millis() - start_ms < interval_ms) return; // not enough time
   //start_ms += interval_ms;

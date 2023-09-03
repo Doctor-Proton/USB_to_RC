@@ -26,6 +26,7 @@
 #include "bsp/board.h"
 #include "tusb.h"
 #include "usb_control_decode.h"
+#include "output.h"
 
 //--------------------------------------------------------------------+
 // MACRO TYPEDEF CONSTANT ENUM DECLARATION

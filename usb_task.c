@@ -45,16 +45,23 @@ uint8_t prod_string[128]; //do we want to worry about unicode?
 uint8_t serial_string[128];
 
 
+
 void usb_host_task(void *p)
 {
+  (void)p;
   gpio_init(USB_POWER_PIN);
   gpio_set_dir(USB_POWER_PIN, GPIO_OUT);
   gpio_put(USB_POWER_PIN, 0);
-  tusb_init();
+  //tusb_init();
+  tud_init(BOARD_TUD_RHPORT);
+  tuh_init(BOARD_TUH_RHPORT);
+  stdio_usb_cdc_init();
+
   init_usb_control_decode();
   uint32_t last_endp_time=0;
   uint32_t start_time=xTaskGetTickCount();
   uint8_t USB_power=0;
+  uint32_t write_timer=xTaskGetTickCount();
   while (1)
   {
     if((xTaskGetTickCount()-start_time)>1000 && USB_power==0)
@@ -63,16 +70,67 @@ void usb_host_task(void *p)
       gpio_put(USB_POWER_PIN, 1);
       }
     tuh_task();
+    tud_task(); // tinyusb device task
     #if CFG_TUH_HID
-    hid_app_task();
+    //hid_app_task();
     #endif
     if(XID_active && (xTaskGetTickCount()-last_endp_time)>=xid_endp_interval)
     {
       last_endp_time=xTaskGetTickCount();
       tuh_edpt_xfer(&xid_endp_xfer);
     }
+    if((xTaskGetTickCount()-write_timer)>1000)
+      {
+      write_timer=xTaskGetTickCount();
+      //tud_cdc_write_str("Test\r\n");
+      //tud_cdc_write_flush();
+
+      }
     vTaskDelay(1);
   }
+}
+
+//--------------------------------------------------------------------+
+// Device CDC
+//--------------------------------------------------------------------+
+
+// Invoked when device is mounted
+void tud_mount_cb(void)
+{
+  //blink_interval_ms = BLINK_MOUNTED;
+}
+
+// Invoked when device is unmounted
+void tud_umount_cb(void)
+{
+  //blink_interval_ms = BLINK_NOT_MOUNTED;
+}
+
+// Invoked when usb bus is suspended
+// remote_wakeup_en : if host allow us  to perform remote wakeup
+// Within 7ms, device must draw an average of current less than 2.5 mA from bus
+void tud_suspend_cb(bool remote_wakeup_en)
+{
+  (void) remote_wakeup_en;
+  //blink_interval_ms = BLINK_SUSPENDED;
+}
+
+// Invoked when usb bus is resumed
+void tud_resume_cb(void)
+{
+  //blink_interval_ms = BLINK_MOUNTED;
+}
+
+// Invoked when CDC interface received data from host
+void tud_cdc_rx_cb(uint8_t itf)
+{
+  /*(void) itf;
+
+  char buf[64];
+  uint32_t count = tud_cdc_read(buf, sizeof(buf));
+
+  // TODO control LED on keyboard of host stack
+  (void) count;*/
 }
 
 /*------------- TinyUSB Callbacks -------------*/
@@ -130,21 +188,21 @@ void print_device_descriptor(tuh_xfer_t* xfer)
   printf("  iManufacturer       %u     "     , desc_device.iManufacturer);
   if (XFER_RESULT_SUCCESS == tuh_descriptor_get_manufacturer_string_sync(daddr, LANGUAGE_ID, temp_buf, sizeof(temp_buf)) )
   {
-    print_utf16(temp_buf, TU_ARRAY_SIZE(temp_buf),mfg_string,sizeof(mfg_string));
+    print_utf16(temp_buf, TU_ARRAY_SIZE(temp_buf),(char*)mfg_string,sizeof(mfg_string));
   }
   printf("\r\n");
 
   printf("  iProduct            %u     "     , desc_device.iProduct);
   if (XFER_RESULT_SUCCESS == tuh_descriptor_get_product_string_sync(daddr, LANGUAGE_ID, temp_buf, sizeof(temp_buf)))
   {
-    print_utf16(temp_buf, TU_ARRAY_SIZE(temp_buf),prod_string,sizeof(prod_string));
+    print_utf16(temp_buf, TU_ARRAY_SIZE(temp_buf),(char*)prod_string,sizeof(prod_string));
   }
   printf("\r\n");
 
   printf("  iSerialNumber       %u     "     , desc_device.iSerialNumber);
   if (XFER_RESULT_SUCCESS == tuh_descriptor_get_serial_string_sync(daddr, LANGUAGE_ID, temp_buf, sizeof(temp_buf)))
   {
-    print_utf16(temp_buf, TU_ARRAY_SIZE(temp_buf),serial_string,sizeof(serial_string));
+    print_utf16(temp_buf, TU_ARRAY_SIZE(temp_buf),(char*)serial_string,sizeof(serial_string));
   }
   printf("\r\n");
 
@@ -173,23 +231,23 @@ int print_device_descriptor_ssi(char *buffer, int Len) //this should maybe be mu
   printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  idProduct           0x%04x<br>" , desc_device.idProduct);
   printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  bcdDevice           %04x<br>"   , desc_device.bcdDevice);
 
-  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  iManufacturer       %u     "     , desc_device.iManufacturer);
-  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,mfg_string);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  iManufacturer       %u     "     , (unsigned int)desc_device.iManufacturer);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,(const char*)mfg_string);
   printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"<br>");
 
-  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  iProduct            %u     "     , desc_device.iProduct);
-  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,prod_string);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  iProduct            %u     "     , (unsigned int)desc_device.iProduct);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,(const char*)prod_string);
   printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"<br>");
 
-  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  iSerialNumber       %u     "     , desc_device.iSerialNumber);
-  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,serial_string);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  iSerialNumber       %u     "     , (unsigned int)desc_device.iSerialNumber);
+  printed_len+=snprintf(&buffer[printed_len],Len-printed_len,(const char*)serial_string);
   printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"<br>");
 
   printed_len+=snprintf(&buffer[printed_len],Len-printed_len,"  bNumConfigurations  %u<br>"     , desc_device.bNumConfigurations);
   return printed_len;
 }
 
-int print_device_descriptor_vt100() //this should maybe be mutex, but only reads desc_device and is only for display
+void print_device_descriptor_vt100() //this should maybe be mutex, but only reads desc_device and is only for display
 {
   printf("VID:PID %04x:%04x\n", desc_device.idVendor, desc_device.idProduct);
   printf("Device Descriptor:\n");
@@ -204,19 +262,19 @@ int print_device_descriptor_vt100() //this should maybe be mutex, but only reads
   printf("  idProduct           0x%04x\n" , desc_device.idProduct);
   printf("  bcdDevice           %04x\n"   , desc_device.bcdDevice);
 
-  printf("  iManufacturer       %u     "     , desc_device.iManufacturer);
-  printf(mfg_string);
+  printf("  iManufacturer       %u     "     , (unsigned int)desc_device.iManufacturer);
+  printf((const char*)mfg_string);
   printf("\n");
 
-  printf("  iProduct            %u     "     , desc_device.iProduct);
-  printf(prod_string);
+  printf("  iProduct            %u     "     , (unsigned int)desc_device.iProduct);
+  printf((const char*)prod_string);
   printf("\n");
 
-  printf("  iSerialNumber       %u     "     , desc_device.iSerialNumber);
-  printf(serial_string);
+  printf("  iSerialNumber       %u     "     , (unsigned int)desc_device.iSerialNumber);
+  printf((const char*)serial_string);
   printf("\n");
 
-  printf("  bNumConfigurations  %u\n"     , desc_device.bNumConfigurations);
+  printf("  bNumConfigurations  %u\n"     , (unsigned int)desc_device.bNumConfigurations);
 }
 
 void copy_device_descriptor(tusb_desc_device_t *desc)
@@ -226,12 +284,12 @@ void copy_device_descriptor(tusb_desc_device_t *desc)
 
 void get_product_string(char *buffer, int len)
 {
-  strncpy(buffer,prod_string,len);
+  strncpy(buffer,(const char*)prod_string,len);
 }
 
 void get_manufacturer_string(char *buffer, int len)
 {
-  strncpy(buffer,mfg_string,len);
+  strncpy(buffer,(const char*)mfg_string,len);
 }
 
 void get_vid_pid(uint16_t *vid, uint16_t *pid)

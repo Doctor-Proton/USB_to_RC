@@ -13,4 +13,6 @@
       "visibility": "hidden"
                },*/
      },
+     "cortex-debug.objdumpPath": "/usr/bin/arm-none-eabi-objdump",
+     "cortex-debug.gdbPath": "gdb-multiarch"
 }
