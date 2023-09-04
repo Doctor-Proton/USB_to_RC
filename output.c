@@ -200,7 +200,7 @@ void output_task(void *arg)
 
     vars_mutex = xSemaphoreCreateMutexStatic (&vars_mutex_buffer);
     configASSERT (vars_mutex);
-    output_init();
+    output_mutex_init();
 
     HID_ReportInfo_t *HID_report_p;
     printf("[Output] starting\r\n");
@@ -293,7 +293,7 @@ void output_task(void *arg)
                         }
                 HID_report_done();
                 //#warning reimplement 
-                ppm_sbus_output_init(MODE_PPM_OUT);
+                
                 
                 }
             //#warning reimplement              
@@ -683,6 +683,9 @@ while(line[0]!=0)
         if(exists==0 && load_output_mixer(config_file)==1)
             {
             ff_fclose(f);
+            sd_unmount();
+            printf("[MIX] initializing outputs\r\n");
+            ppm_sbus_output_init();
             return;
             }
         get_config_line(line,sizeof(line),f);
@@ -690,6 +693,8 @@ while(line[0]!=0)
 printf("[MIX] done\r\n");
 ff_fclose(f);
 sd_unmount();
+printf("[MIX] initializing outputs\r\n");
+ppm_sbus_output_init();
 }
 //#endif
 

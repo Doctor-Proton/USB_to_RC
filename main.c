@@ -34,9 +34,6 @@
 #include "task.h"
 #include "output.h"
 #include "usb_task.h"
-#ifdef WIFI_UI
-#include "wifi.h"
-#endif
 #include "VT100.h"
 
 //--------------------------------------------------------------------+
@@ -61,11 +58,6 @@ StackType_t xUSBTaskStack[ USB_TASK_STACKSIZE ];
 StaticTask_t xOutputTaskBuffer;
 StackType_t xOutputTaskStack[ OUTPUT_TASK_STACKSIZE ];
 
-#ifdef WIFI_UI
-#define WIFI_TASK_STACKSIZE 512
-StaticTask_t xWifiTaskBuffer;
-StackType_t xWifiTaskStack[ WIFI_TASK_STACKSIZE ];
-#endif
 
 #define VT100_TASK_STACKSIZE 1024
 StaticTask_t xVT100TaskBuffer;
@@ -85,11 +77,6 @@ int main(void)
   xTaskHandle OutputTaskHandle=xTaskCreateStatic(output_task, "output_Task", OUTPUT_TASK_STACKSIZE, NULL, 250, xOutputTaskStack,&xOutputTaskBuffer);
   xTaskHandle VT100TaskHandle=xTaskCreateStatic(VT100_task,"VT100_Task",VT100_TASK_STACKSIZE,NULL,240,xVT100TaskStack,&xVT100TaskBuffer);
   UBaseType_t uxCoreAffinityMask;
-#ifdef WIFI_UI
-  xTaskHandle WifiTaskHandle=xTaskCreateStatic(wifi_task, "wifi_Task", WIFI_TASK_STACKSIZE, NULL, 250, xWifiTaskStack,&xWifiTaskBuffer);
-  uxCoreAffinityMask = (( 1 << 1 ));
-  vTaskCoreAffinitySet(WifiTaskHandle,uxCoreAffinityMask);
-#endif
 
   uxCoreAffinityMask=(1<<0);
   vTaskCoreAffinitySet(LEDTaskHandle,uxCoreAffinityMask);

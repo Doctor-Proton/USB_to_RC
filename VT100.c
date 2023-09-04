@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <unistd.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "pico/stdlib.h"
@@ -25,40 +26,56 @@ enum {
     //MENU_DESCRIPTOR,
 } menu_state=MENU_NORMAL, last_menu_state=MENU_NORMAL;
 
+#define RED_TEXT_STRING "\033[31m"
+#define DEFAULT_TEXT_STRING "\033[39m"
+#define RED_BACKGROUND_STRING "\033[41m"
+#define DEFAULT_BACKGROUND_STRING "\033[49m"
+#define CLEAR_SCREEN_STRING "\033[J"
+#define NO_USB_STRING "No USB device connected\n"
+
 void red_text(void)
 {
-    printf("\033[31m");
+    write(1,RED_TEXT_STRING,sizeof(RED_TEXT_STRING));
 }
 
 void default_text(void)
 {
-    printf("\033[39m");
+    write(1,DEFAULT_TEXT_STRING,sizeof(DEFAULT_TEXT_STRING));
 }
 
 void red_background(void)
 {
-    printf("\033[41m");
+    write(1,RED_BACKGROUND_STRING,sizeof(RED_BACKGROUND_STRING));
 }
 
 void default_background(void)
 {
-  printf("\033[49m");  
+    write(1,DEFAULT_BACKGROUND_STRING,sizeof(DEFAULT_BACKGROUND_STRING));  
 }
 
 void set_cursor(uint16_t x, uint16_t y)
 {
-printf("\033[%d;%df",y,x);  
+char buffer[32];
+int count;
+count=snprintf(buffer,sizeof(buffer),"\033[%d;%df",y,x);
+write(1,buffer,count);
 }
 
 void clear_screen(void)
 {
-    printf("\033[J");
+    write(1,CLEAR_SCREEN_STRING,sizeof(CLEAR_SCREEN_STRING));
+}
+
+void set_terminal(void)
+{
+    printf("\033[8;%d;%dt",40,160);
 }
 
 void print_normal(void)
 {
     
     uint16_t vid,pid;
+    char print_buffer[64];
 
     bool full_draw=false;
     if((xTaskGetTickCount()-full_redraw_timer)>FULL_DRAW_TIME || full_redraw_timer==0)
@@ -72,7 +89,7 @@ void print_normal(void)
         //clear_screen();
         default_background();
         red_text();
-        printf("No USB device connected\n");
+        write(1,NO_USB_STRING,sizeof(NO_USB_STRING));
         default_text();
         full_redraw_timer=0;
         last_connected_state=usb_connected();
@@ -81,6 +98,7 @@ void print_normal(void)
     last_connected_state=usb_connected();
     if(full_draw==true)
         {
+        set_terminal();
         set_cursor(0,0);
         clear_screen();
         default_background();
@@ -101,6 +119,7 @@ void print_normal(void)
         }
     
     int count=get_vars_count();
+    default_background();
     for(int i=0;i<count;i++)
     {
         float value;
@@ -113,7 +132,7 @@ void print_normal(void)
             delta=0;
         change_buffer[i]=change_buffer[i]*CHANGE_BUFFER_LPF + (1-CHANGE_BUFFER_LPF)*(delta);
 
-        default_background();
+        
         char printf_modifier[]="%+1.2f";
         if(strstr(buffer,"out")!=0)
             strncpy(printf_modifier,"%+1.0f",sizeof(printf_modifier));
@@ -146,7 +165,8 @@ void print_normal(void)
                     red_background();
                     else
                     default_background();
-                printf((const char *)printf_modifier,value);
+                int count=snprintf(print_buffer,sizeof(print_buffer),(const char *)printf_modifier,value);
+                write(1,print_buffer,count);
                 default_background();               
                 }
             }

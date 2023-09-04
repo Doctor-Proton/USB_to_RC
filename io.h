@@ -1,3 +1,4 @@
+#define SBUS_TX_GPIO 0
 #define UART_TX_GPIO 8
 #define UART_RX_GPIO 9
 #define PPM_OUTPUT_PIN 15

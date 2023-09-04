@@ -33,7 +33,7 @@
 
 uint16_t Channels[CHANNEL_COUNT]={0};
 
-
+bool output_stop=true;
 
 void SendPPM(uint16_t Channels[], uint8_t ChannelCount);
 void SendSbus(uint16_t Channels[], uint8_t ChannelCount);
@@ -52,7 +52,6 @@ static uint16_t output_channels[MAX_OUTPUT_CHANNELS];
 
 #define OUTPUT_PERIOD 25
 
-OutputType_t OutputType=MODE_NO_OUTPUT;
 uint32_t LastOutputTime=0;
 
 uint32_t HeartbeatTick=0;
@@ -78,27 +77,26 @@ void output_send_mavlink(mavlink_message_t *msg)
 int pwm_dma_chan;
 dma_channel_config pwm_dma_chan_config;
 
-void output_init(void)
+void output_mutex_init(void)
 {
     ppm_output_mutex = xSemaphoreCreateMutexStatic( &ppm_output_mutex_buffer );
-    gpio_set_function(UART_TX_GPIO, GPIO_FUNC_UART);
-    gpio_set_function(UART_RX_GPIO, GPIO_FUNC_UART);
-    setupuart(1,1,UART_PARITY_NONE,8,115200);
+
 
 
 }
 
-void ppm_sbus_output_init(OutputType_t Type)
+void ppm_sbus_output_init(void)
 {
+
     if(xSemaphoreTake(ppm_output_mutex,200)==pdTRUE)
         {
-        OutputType=Type;
         gpio_set_function(PPM_OUTPUT_PIN, GPIO_FUNC_PWM);
         uint slice_num = pwm_gpio_to_slice_num(PPM_OUTPUT_PIN);
         uint chan = pwm_gpio_to_channel(PPM_OUTPUT_PIN);
         pwm_set_clkdiv_int_frac(slice_num, 124, 0);
         pwm_set_chan_level(slice_num, chan, PPM_BASE_TIME);
-        pwm_set_output_polarity(slice_num,false,true);
+
+        pwm_set_output_polarity(slice_num,false,PPM_INVERT);
 
 
         // Setup DMA channel to drive the PWM
@@ -113,23 +111,28 @@ void ppm_sbus_output_init(OutputType_t Type)
         // Transfer when PWM slice that is connected to the LED asks for a new value
         channel_config_set_dreq(&pwm_dma_chan_config, DREQ_PWM_WRAP0 + slice_num);
 
-
-
+            output_stop=false;
         xSemaphoreGive(ppm_output_mutex);
         }
+    gpio_set_function(UART_TX_GPIO, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX_GPIO, GPIO_FUNC_UART);
+    setupuart(1,1,UART_PARITY_NONE,8,UART_BAUD);
+
+    gpio_set_function(SBUS_TX_GPIO, GPIO_FUNC_UART);
+    setupuart(0,2,UART_PARITY_EVEN,8,100000);   //setup sbus uart for 8E2
+    if(!SBUS_INVERT)
+        gpio_set_outover(SBUS_TX_GPIO,GPIO_OVERRIDE_INVERT);
+    
 }
 
 void output_clear(void)
 {
+    output_stop=true;
     if(xSemaphoreTake(ppm_output_mutex,200)==pdTRUE)
         {
-        if(OutputType!=MODE_NO_OUTPUT)
-            {
-            uint slice_num = pwm_gpio_to_slice_num(PPM_OUTPUT_PIN);
-            pwm_set_enabled(slice_num,false);
-            pwm_set_counter(slice_num,0);
-            OutputType=MODE_NO_OUTPUT;
-            }
+        uint slice_num = pwm_gpio_to_slice_num(PPM_OUTPUT_PIN);
+        pwm_set_enabled(slice_num,false);
+        pwm_set_counter(slice_num,0);
         xSemaphoreGive(ppm_output_mutex);
         }
 }
@@ -149,20 +152,21 @@ void output_tick(void)
 if((xTaskGetTickCount()-LastOutputTime)>OUTPUT_PERIOD && xSemaphoreTake(ppm_output_mutex,2)==pdTRUE)
     {
     LastOutputTime=xTaskGetTickCount();
-    if(OutputType==MODE_PPM_OUT)
+    if(output_stop==false)
+        {
         SendPPM(output_channels,PPM_CHANNEL_COUNT);
-    if(OutputType==MODE_SBUS_OUT)
         SendSbus(output_channels,MAX_OUTPUT_CHANNELS);
+        }
     xSemaphoreGive(ppm_output_mutex);
     }
-if((xTaskGetTickCount()-HeartbeatTick)>(uint32_t)get_param("MAVLINK_HEARTBEAT_INTERVAL") && (uint32_t)get_param("MAVLINK_HEARTBEAT_INTERVAL")!=0)
+if((xTaskGetTickCount()-HeartbeatTick)>HEARTBEAT_INTERVAL && HEARTBEAT_INTERVAL!=0)
     {
     HeartbeatTick=xTaskGetTickCount();
     mavlink_message_t Heartbeat;
     mavlink_msg_heartbeat_pack_chan(MAV_SYS_ID,MAV_COMP_ID,0,&Heartbeat,MAV_TYPE_GENERIC,MAV_AUTOPILOT_INVALID,0,0,0);
     output_send_mavlink(&Heartbeat);
     }
-if((xTaskGetTickCount()-RCOverrideTick)>(uint32_t)get_param("MAVLINK_RC_OVERRIDE_INTERVAL") && OutputType!=MODE_NO_OUTPUT)
+if((xTaskGetTickCount()-RCOverrideTick)>OVERRIDE_INTERVAL && output_stop==false)
     {
     RCOverrideTick=xTaskGetTickCount();
     mavlink_message_t Override;
@@ -190,7 +194,8 @@ void dma_irh() {
 
 void SendPPM(uint16_t Channels[], uint8_t ChannelCount)
 {
-
+if(output_stop==true)
+    return;
 uint slice_num = pwm_gpio_to_slice_num(PPM_OUTPUT_PIN);
 uint chan = pwm_gpio_to_channel(PPM_OUTPUT_PIN);
 //#warning setup ppm frame send here
@@ -280,50 +285,9 @@ void SendSbus(uint16_t Channels[], uint8_t ChannelCount)
                 }
             }
         }
-uint16_t RMTIndex=0;
 
-#warning map sbus to HW output here
-#if 0
 for(int i=0;i<SBUS_BYTES;i++)
     {
-        uint8_t Parity=0;
-        //SbusBytes[i]=i*5;
-
-        for(int j=0;j<8;j++)
-            {
-                if(SbusBytes[i]&(1<<j))
-                    Parity++;
-            }
-        uint16_t Frame=SbusBytes[i]<<1;    //shift in a 0 for the start bit
-        if((Parity%2)==1)   //odd number of bits
-            Frame|=(1<<9);  //set the parity bit
-        Frame|=(1<<10);
-        Frame|=(1<<11); //set the stop bits
-    
-    uint8_t BitsConsumed=0;
-    while(BitsConsumed<SBUS_BITS_PER_BYTE)
-    {
-        uint16_t Time=0;
-        while((BitsConsumed<SBUS_BITS_PER_BYTE) && !(Frame&(1<<BitsConsumed)) )  //go through all bits that are zero
-        {
-            BitsConsumed++;
-            Time+=SBUS_BIT_TIME;
-        }
-        SbusValues[RMTIndex].duration0=Time;
-        SbusValues[RMTIndex].level0=1;  //set bits to 1, since sbus is inverted
-        
-        Time=0;
-        while((BitsConsumed<SBUS_BITS_PER_BYTE) && (Frame&(1<<BitsConsumed)) )  //go through all bits that are zero
-        {
-            BitsConsumed++;
-            Time+=SBUS_BIT_TIME;
-        }
-        SbusValues[RMTIndex].duration1=Time;
-        SbusValues[RMTIndex].level1=0;  //set bits to 0, since sbus is inverted
-        RMTIndex++;
-
+        SerialPutchar(0,SbusBytes[i]);
     }
-
-    }
-    #endif
 }

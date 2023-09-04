@@ -7,27 +7,22 @@ typedef enum
 
 
 
-void ppm_sbus_output_init(OutputType_t Type);
+void ppm_sbus_output_init(void);
 void assign_output_channels(uint16_t Channels[]);
 void output_tick(void);
 void SendPPM(uint16_t Channels[], uint8_t ChannelCount);
 void SendSbus(uint16_t Channels[], uint8_t ChannelCount);
 void output_clear(void);
-void output_init(void);
+void output_mutex_init(void);
 
 
-#define HEARTBEAT_INTERVAL 1000
 
 //stuff below needs to be configurable
 
-#define RC_CHANNELS_OVERRIDE_INTERVAL 25
-#define MAV_SYS_ID 255
-#define MAV_COMP_ID 2
-#define RC_TARGET_SYS_ID 1
-#define RC_TARGET_COMP_ID 1
 
 
-#define UART_BAUD 115200
+
+
 
 #define MAX_OUTPUT_CHANNELS 16
 
