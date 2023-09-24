@@ -28,7 +28,7 @@
 #define SBUS_RMT_SIZE ((SBUS_BITS_PER_BYTE+1)*SBUS_BYTES+1)
 #define SBUS_BIT_TIME 10    //10 microseconds for 100000 baud.  requires an RMT time base of 1uS
 
-#define LSB_PER_US ((UPPER_LSB-LOWER_LSB)/(UPPER_US-LOWER_US))
+#define LSB_PER_US (((float)(UPPER_LSB-LOWER_LSB))/((float)(UPPER_US-LOWER_US)))
 #define ZERO_LSB_US (LOWER_US-LOWER_LSB/LSB_PER_US)
 
 uint16_t Channels[CHANNEL_COUNT]={0};

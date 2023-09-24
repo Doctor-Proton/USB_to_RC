@@ -49,9 +49,11 @@ uint8_t serial_string[128];
 void usb_host_task(void *p)
 {
   (void)p;
+#ifdef USB_POWER_PIN
   gpio_init(USB_POWER_PIN);
   gpio_set_dir(USB_POWER_PIN, GPIO_OUT);
   gpio_put(USB_POWER_PIN, 0);
+#endif
   //tusb_init();
   tud_init(BOARD_TUD_RHPORT);
   tuh_init(BOARD_TUH_RHPORT);
@@ -67,7 +69,9 @@ void usb_host_task(void *p)
     if((xTaskGetTickCount()-start_time)>1000 && USB_power==0)
       {
       USB_power=1;
+#ifdef USB_POWER_PIN
       gpio_put(USB_POWER_PIN, 1);
+#endif
       }
     tuh_task();
     tud_task(); // tinyusb device task

@@ -98,6 +98,7 @@ target_include_directories(USBHost PUBLIC
         #dhcpserver/
 )
 
+
 add_subdirectory(HIDParser)
 
 # Add any user requested libraries

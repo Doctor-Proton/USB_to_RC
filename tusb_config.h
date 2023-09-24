@@ -26,6 +26,8 @@
 #ifndef _TUSB_CONFIG_H_
 #define _TUSB_CONFIG_H_
 
+#include "io.h"
+
 #ifdef __cplusplus
  extern "C" {
 #endif
@@ -64,7 +66,7 @@
 #endif
 
 #ifndef CFG_TUSB_OS
-#define CFG_TUSB_OS           OPT_OS_NONE
+#define CFG_TUSB_OS           OPT_OS_FREERTOS
 #endif
 
 #ifndef CFG_TUSB_DEBUG
@@ -82,6 +84,7 @@
 #if CFG_TUSB_MCU == OPT_MCU_RP2040
 // Use pico-pio-usb as host controller for raspberry rp2040
 #define CFG_TUH_RPI_PIO_USB   1
+#define PIO_USB_DP_PIN PIO_DP_PIN
 #endif
 
 

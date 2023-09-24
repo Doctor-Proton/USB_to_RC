@@ -81,7 +81,7 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
   {
     hid_info[instance].report_count = tuh_hid_parse_report_descriptor(hid_info[instance].report_info, MAX_REPORT, desc_report, desc_len);
     printf("HID has %u reports \r\n", hid_info[instance].report_count);
-    load_HID_report(desc_report,desc_len);
+    load_HID_report((unsigned char*)desc_report,desc_len);
     uint16_t VID,PID;
     tuh_vid_pid_get(dev_addr,&VID,&PID);
     signal_new_device(VID,PID);
@@ -241,7 +241,7 @@ static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t c
 {
   (void) dev_addr;
 
-  process_usb_packet(report,len);
+  process_usb_packet((unsigned char*)report,len);
   return;
 
   uint8_t const rpt_count = hid_info[instance].report_count;

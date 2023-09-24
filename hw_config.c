@@ -26,6 +26,7 @@ socket, which SPI it is driven by, and how it is wired.
 #include <string.h>
 //
 #include "hw_config.h"
+#include "io.h"
 
 void spi1_dma_isr();
 
@@ -34,9 +35,9 @@ void spi1_dma_isr();
 // selects.
 static spi_t spis[] = {  // One for each SPI.
     {.hw_inst = spi1,    // SPI component
-     .miso_gpio = 12,
-     .mosi_gpio = 11,
-     .sck_gpio = 10,
+     .miso_gpio = SD_MISO,
+     .mosi_gpio = SD_MOSI,
+     .sck_gpio = SD_SCK,
      .baud_rate = 12500 * 1000,
      .dma_isr = spi1_dma_isr}};
 
@@ -44,7 +45,7 @@ static spi_t spis[] = {  // One for each SPI.
 static sd_card_t sd_cards[] = {  // One for each SD card
     {.pcName = "sd0",            // Name used to mount device
      .spi = &spis[0],            // Pointer to the SPI driving this card
-     .ss_gpio = 13,              // The SPI slave select GPIO for this SD card
+     .ss_gpio = SD_CS,              // The SPI slave select GPIO for this SD card
      .use_card_detect = false,
      .card_detect_gpio = 22,   // Card detect
      .card_detected_true = -1,  // What the GPIO read returns when a card is
