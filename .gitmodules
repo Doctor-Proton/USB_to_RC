@@ -1,0 +1,9 @@
+[submodule "FreeRTOS-FAT-CLI-for-RPi-Pico"]
+	path = FreeRTOS-FAT-CLI-for-RPi-Pico
+	url = https://github.com/Doctor-Proton/FreeRTOS-FAT-CLI-for-RPi-Pico.git
+[submodule "Pico-PIO-USB"]
+	path = Pico-PIO-USB
+	url = https://github.com/sekigon-gonnoc/Pico-PIO-USB.git
+[submodule "expr"]
+	path = expr
+	url = https://github.com/zserge/expr.git
