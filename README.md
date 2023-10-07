@@ -18,12 +18,19 @@ See IO.h for pinning information
 This section assumes you have a working RP2040 toolchain installed.  You will also need to edit the top level CMakeLists.txt to point to the location of your PICO SDK.
 
 git clone https://github.com/Doctor-Proton/USB_to_RC.git
+
 cd USB_to_RC
+
 git submodule update --init --recursive
+
 mkdir build
+
 cd build
+
 cmake -DCMAKE_BUILD_TYPE=Debug ..
+
 make
+
 
 **Configuration**
 
