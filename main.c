@@ -1,28 +1,20 @@
-/* 
- * The MIT License (MIT)
- *
- * Copyright (c) 2019 Ha Thach (tinyusb.org)
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- */
+  /*
+    USB to RC - Convert USB gamepads, joysticks, etc to RC (ppm, sbus, mavlink)
+    Copyright (C) 2023  Greg Wood
 
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -68,9 +60,6 @@ int main(void)
 {
   board_init(); 
   stdio_init_all();
-
-
-  printf("TinyUSB Host CDC MSC HID Example\r\n");
   
   xTaskHandle LEDTaskHandle=xTaskCreateStatic(led_blinking_task, "LED_Task", LED_TASK_STACKSIZE, NULL, 1, xLEDTaskStack,&xLEDTaskBuffer);
   xTaskHandle USBTaskHandle=xTaskCreateStatic(usb_host_task, "USB_Task", USB_TASK_STACKSIZE, NULL, 255, xUSBTaskStack,&xUSBTaskBuffer);
@@ -121,64 +110,4 @@ while (1)
   }
 }
 
-#if 0
-#define IDLE_TASK_STACKSIZE 256
-static StaticTask_t xIdleTaskTCB;
-static StackType_t uxIdleTaskStack[ IDLE_TASK_STACKSIZE ];
 
-#define TIMER_TASK_STACKSIZE 256
-static StaticTask_t xTimerTaskTCB;
-static StackType_t uxTimerTaskStack[ TIMER_TASK_STACKSIZE ];
-
-/* configSUPPORT_STATIC_ALLOCATION is set to 1, so the application must provide an
-implementation of vApplicationGetIdleTaskMemory() to provide the memory that is
-used by the Idle task. */
-void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
-                                    StackType_t **ppxIdleTaskStackBuffer,
-                                    uint32_t *pulIdleTaskStackSize )
-{
-/* If the buffers to be provided to the Idle task are declared inside this
-function then they must be declared static - otherwise they will be allocated on
-the stack and so not exists after this function exits. */
-
-
-    /* Pass out a pointer to the StaticTask_t structure in which the Idle task's
-    state will be stored. */
-    *ppxIdleTaskTCBBuffer = &xIdleTaskTCB;
-
-    /* Pass out the array that will be used as the Idle task's stack. */
-    *ppxIdleTaskStackBuffer = uxIdleTaskStack;
-
-    /* Pass out the size of the array pointed to by *ppxIdleTaskStackBuffer.
-    Note that, as the array is necessarily of type StackType_t,
-    configMINIMAL_STACK_SIZE is specified in words, not bytes. */
-    *pulIdleTaskStackSize = IDLE_TASK_STACKSIZE;
-}
-/*-----------------------------------------------------------*/
-
-/* configSUPPORT_STATIC_ALLOCATION and configUSE_TIMERS are both set to 1, so the
-application must provide an implementation of vApplicationGetTimerTaskMemory()
-to provide the memory that is used by the Timer service task. */
-void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer,
-                                     StackType_t **ppxTimerTaskStackBuffer,
-                                     uint32_t *pulTimerTaskStackSize )
-{
-/* If the buffers to be provided to the Timer task are declared inside this
-function then they must be declared static - otherwise they will be allocated on
-the stack and so not exists after this function exits. */
-
-
-    /* Pass out a pointer to the StaticTask_t structure in which the Timer
-    task's state will be stored. */
-    *ppxTimerTaskTCBBuffer = &xTimerTaskTCB;
-
-    /* Pass out the array that will be used as the Timer task's stack. */
-    *ppxTimerTaskStackBuffer = uxTimerTaskStack;
-
-    /* Pass out the size of the array pointed to by *ppxTimerTaskStackBuffer.
-    Note that, as the array is necessarily of type StackType_t,
-    configTIMER_TASK_STACK_DEPTH is specified in words, not bytes. */
-    *pulTimerTaskStackSize = TIMER_TASK_STACKSIZE;
-}
-
-#endif

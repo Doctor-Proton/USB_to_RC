@@ -1,3 +1,20 @@
+  /*
+    USB to RC - Convert USB gamepads, joysticks, etc to RC (ppm, sbus, mavlink)
+    Copyright (C) 2023  Greg Wood
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
@@ -80,7 +97,7 @@ axis_lookup_t axis_lookups[]={
 
 axis_lookup_t* get_axis_name(int usage)
 {
-    for(int i=0;i<sizeof(axis_lookups)/sizeof(axis_lookup_t);i++)
+    for(unsigned int i=0;i<sizeof(axis_lookups)/sizeof(axis_lookup_t);i++)
         {
             if(axis_lookups[i].value==usage)
                 return &axis_lookups[i];
@@ -95,19 +112,23 @@ struct expr *expressions[MAX_EXPRESSION_COUNT]={0};
 unsigned short _VID=0,_PID=0;
 
 static float scale_us(struct expr_func *f, vec_expr_t *args, void *c) {
-  float input = expr_eval(&vec_nth(args, 0));
-  float min = expr_eval(&vec_nth(args, 1));
-  float max = expr_eval(&vec_nth(args, 2));
-  float Span=max-min;
-  return Span*input+min;
+    (void) (f);
+    (void) (c);
+    float input = expr_eval(&vec_nth(args, 0));
+    float min = expr_eval(&vec_nth(args, 1));
+    float max = expr_eval(&vec_nth(args, 2));
+    float Span=max-min;
+    return Span*input+min;
 }
 
 static float scale_percent(struct expr_func *f, vec_expr_t *args, void *c) {
-uint16_t min_us=LOWER_US;   //-100%
-uint16_t max_us=UPPER_US;   //100%
+    (void) (f);
+    (void) (c);
+    uint16_t min_us=LOWER_US;   //-100%
+    uint16_t max_us=UPPER_US;   //100%
     float input = (expr_eval(&vec_nth(args, 0))-0.5f)/0.5f;
-    float min = expr_eval(&vec_nth(args, 1))/100;
-    float max = expr_eval(&vec_nth(args, 2))/100;
+    //float min = expr_eval(&vec_nth(args, 1))/100;
+    //float max = expr_eval(&vec_nth(args, 2))/100;
     float center_us=(min_us+max_us)/2;
     float Span;
     if(input<0)
@@ -119,6 +140,8 @@ uint16_t max_us=UPPER_US;   //100%
 
 static float sticky_buttons_us(struct expr_func *f, vec_expr_t *args, void *c)
 {
+    (void) (f);
+    (void) (c);
     if(args->len<2)
         return 0;
     float old_value=expr_eval(&vec_nth(args, 0));
@@ -140,6 +163,8 @@ static float sticky_buttons_us(struct expr_func *f, vec_expr_t *args, void *c)
 
 static float sticky_buttons_percent(struct expr_func *f, vec_expr_t *args, void *c)
 {
+    (void) (f);
+    (void) (c);
 uint16_t min_us=LOWER_US;   //-100%
 uint16_t max_us=UPPER_US;   //100%
     if(args->len<2)
@@ -191,7 +216,7 @@ static struct expr_func user_funcs[] = {
 
 void output_task(void *arg)
 {
-
+    (void)(arg);
     output_ready_event_handle = xEventGroupCreateStatic( &output_ready_group );
     configASSERT( output_ready_event_handle );
 
@@ -204,7 +229,6 @@ void output_task(void *arg)
 
     HID_ReportInfo_t *HID_report_p;
     printf("[Output] starting\r\n");
-    uint32_t last_output_time=0;
     uint32_t print_timer=0;
 
     vTaskDelay(500);
@@ -316,7 +340,7 @@ void output_task(void *arg)
                 //printf("[OUTPUT] calculating output\r\n");
                 input_count=HID_report_p->TotalReportItems<MAX_INPUT_CHANNELS?HID_report_p->TotalReportItems:MAX_INPUT_CHANNELS;
                 int button_index=0;
-                for(int i=0;i<sizeof(axis_lookups)/sizeof(axis_lookup_t);i++)
+                for(unsigned int i=0;i<sizeof(axis_lookups)/sizeof(axis_lookup_t);i++)
                 {
                     axis_lookups[i].print_index=0;
                 }
@@ -453,10 +477,6 @@ void output_task(void *arg)
     output_tick();
     }
     
-    //unreachable 
-    #warning reimplement
-    if(is_sd_mounted()==true)
-        sd_unmount();
 }
 
 void output_set_event(void)
@@ -661,7 +681,6 @@ while(line[0]!=0)
     {
         printf("[MIX] Read lookup line %s\r\n", line);
         short int VID,PID;
-        int i=0;
         int items=sscanf(line,"%hX:%hX %s",&VID,&PID,config_file);
         if(items!=3)
             {
@@ -728,7 +747,7 @@ void signal_device_gone(void)
     output_clear();
     if(xSemaphoreTake(vars_mutex,100)==pdTRUE)
         {
-        for(int i=0;i<sizeof(axis_lookups)/sizeof(axis_lookup_t);i++)
+        for(unsigned int i=0;i<sizeof(axis_lookups)/sizeof(axis_lookup_t);i++)
             {
                 axis_lookups[i].count=0;
             }
@@ -751,7 +770,6 @@ void signal_device_gone(void)
 
 int read_vars_bytes(unsigned char *buf, int offset, int len)
 {
-int start=0;
 int bytes_read=0;
 if(xSemaphoreTake(vars_mutex,100)==pdTRUE)
     {
