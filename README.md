@@ -12,6 +12,7 @@ https://learn.adafruit.com/adafruit-feather-rp2040-with-usb-type-a-host
 https://learn.adafruit.com/adafruit-adalogger-featherwing
 
 See IO.h for pinning information
+<img src="https://github.com/Doctor-Proton/USB_to_RC/blob/master/images/Adafruit%20feather%20USB_to_RC.jpg">
 
 **cloning and build**
 
@@ -38,6 +39,7 @@ Connect the USB-C port (Adafruit) or USB micro-B port (raspberry pi pico) to a c
 
 Some variables are automatically named, button_XX, X,Y,Z,Rx,hat_switch, etc.  Others are just called in_XX.  16 out_XX variables are automatically created.  These correspond to the 16 RC channels (only the first 9 are on PPM) that will be output.  Move the gamepad controls to see which variables are affected.
 
+<img src="https://github.com/Doctor-Proton/USB_to_RC/blob/master/images/VT100%20main%20-%20edited.png">
 
 Configuration files define how to "mix" the input variables to the output variables.  This is in the form of simple expressions.  These config files must live the "config" directory on the root of the SD card.  A master configuration file (lookup.cfg) looks up a configuration file for a given VID:PID pair.  See the example configuration files.
 
