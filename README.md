@@ -45,6 +45,25 @@ Configuration files define how to "mix" the input variables to the output variab
 
 Output options (baud rates, inversion, etc) can be set by setting certain variables in the configuration files.  See the examples.
 
+**Attributions**
+
+
+The project makes use of following projects.  In many cases their submodules as well
+
+expr
+https://github.com/zserge/expr
+
+Pico-PIO-USB
+https://github.com/sekigon-gonnoc/Pico-PIO-USB
+
+FreeRTOS-FAT-CLI-for-RPi-Pico
+https://github.com/carlk3/FreeRTOS-FAT-CLI-for-RPi-Pico
+
+HID parser code is from Lufa
+https://github.com/abcminiuser/lufa
+
+
+
 
 
 
