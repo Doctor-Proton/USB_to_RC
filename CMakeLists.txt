@@ -1,7 +1,6 @@
 # Generated Cmake Pico project file
 
 cmake_minimum_required(VERSION 3.13) #- commented out for nested cmake
-set(PICO_SDK_PATH "/home/greg/pico/pico-sdk") 
 set(FREERTOS_KERNEL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/FreeRTOS-FAT-CLI-for-RPi-Pico/FreeRTOS-Kernel")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
